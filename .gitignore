@@ -1,0 +1,26 @@
+# dependencies
+/node_modules
+/seeder/node_modules
+/database-design
+
+# compiled output
+/dist
+
+*.js.map
+
+# IDE files
+.vscode
+.idea
+
+# logs
+logs
+*.log
+
+# environment variables
+.env
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+.env
+yarn-error.log
