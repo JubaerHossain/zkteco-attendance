@@ -1,7 +1,7 @@
 const ZKJUBAER = require("zk-jubaer");
 const axios = require('axios');
 
-const ip = "192.168.1.201";
+const ip = "";
 const port = 4370;
 const timeout = 520000;
 const inport = 1000;
