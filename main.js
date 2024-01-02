@@ -4,7 +4,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const runMachine = async () => {
   while (true) {
-    const obj = new ZKJUBAER("192.168.1.201", 4370, 5200, 10000);
+    const obj = new ZKJUBAER("10.10.1.10", 4370, 5200, 100000);
 
     try {
       await obj.createSocket();
