@@ -1,70 +1,119 @@
-const net = require('net');
-const fs = require('fs');  // For logging
+const ZKJUBAER = require("zk-jubaer");
+const axios = require("axios");
 
-// Configuration (replace with your values)
-const config = {
-  deviceIp: '192.168.1.201',
-  devicePort: 4370,
-  pollingInterval: 5000,  // In milliseconds
-  logFile: 'attendance.log'
+const ip = "192.168.1.250";
+const port = 4370;
+const timeout = 5200;
+const inport = 1000;
+
+// REST API Parameters
+const API_URL = "https://your-api-endpoint.com/attendance";
+const API_KEY = "your-api-key";
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const subscribeToRealTimeLogs = async (zkjubaer) => {
+  return new Promise(async (resolve, reject) => {
+    return zkjubaer.getRealTimeLogs(
+      async (realTimeLog) => {
+        console.log("Real-time Log:", realTimeLog);
+
+        // Assuming realTimeLog contains user_id and event_time properties
+        const { userId, attTime } = realTimeLog;
+
+        try {
+          // Send attendance data to the REST API
+          // await axios.post(API_URL, {
+          //     user_id,
+          //     event_time,
+          // }, {
+          //     headers: {
+          //         'Authorization': `Bearer ${API_KEY}`,
+          //         'Content-Type': 'application/json',
+          //     },
+          // });
+
+          console.log(
+            `Attendance data for user <strong>${userId}</strong> sent to the API at <strong>${attTime}</strong>`
+          );
+          
+          resolve();
+        } catch (apiError) {
+          reject(apiError);
+        }
+      },
+      (error) => {
+        reject(error);
+      },
+      () => {
+        resolve();
+      }
+    );
+  });
 };
 
-// Establish connection to ZKTeco device
-function connectToDevice() {
-  return new Promise((resolve, reject) => {
-    const socket = net.connect(config.devicePort, config.deviceIp, () => {
-      console.log('Connected to ZKTeco device');
-      resolve(socket);
-    });
+const userList = async (zkjubaer) => {
+  return zkjubaer.getUsers();
+};
 
-    socket.on('error', (err) => {
-      console.error('Device connection error:', err);
-      reject(err);
-    });
-  });
-}
+const getDevice = (zkjubaer) => {
+  return zkjubaer.getInfo();
+};
 
-// Retrieve attendance data and log to file
-async function getAndLogAttendanceData(socket) {
+const createAndConnect = async () => {
+  const zkjubaer = new ZKJUBAER(ip, port, timeout, inport);
   try {
-    const command = 'ATTLOG\t\n';
-    socket.write(command);
-
-    socket.on('data', (data) => {
-
-        console.log('data', data);
-      const attendanceData = processDeviceResponse(data);
-      logAttendanceData(attendanceData);
-    });
+    await zkjubaer.createSocket();
+    return zkjubaer;
   } catch (error) {
-    console.error('Error retrieving attendance data:', error);
-    logError(error);
+    console.error("Error creating socket:", error);
+    throw error;
   }
-}
+};
 
-// Process device response (adapt based on device documentation)
-function processDeviceResponse(data) {
-  // Implement parsing logic to extract attendance data
-  console.log('Attendance data:', data);
-  const attendanceData = data
-  return attendanceData;
-}
-
-// Log attendance data to file
-function logAttendanceData(data) {
-    console.log(data);
-  fs.appendFileSync(config.logFile, `${new Date().toISOString()} - Attendance Data: ${JSON.stringify(data)}\n`);
-}
-
-// Main loop
-async function main() {
+const disconnect = async (zkjubaer) => {
   try {
-    const socket = await connectToDevice();
-    setInterval(getAndLogAttendanceData, config.pollingInterval, socket);
-  } catch (error) {
-    console.error('Error in main loop:', error);
-    logError(error);
+    if (zkjubaer._socket) {
+      zkjubaer._socket.end();
+    }
+  } catch (disconnectError) {
+    console.error("Error during disconnect:", disconnectError);
   }
-}
+};
 
-main();
+const runMachine = async () => {
+  let isSubscribed = false;
+  try {
+    // while (true) {
+      const zkjubaer = await createAndConnect();
+
+      try {
+        const device = await getDevice(zkjubaer);
+        console.log(device);
+        //   console.log("user list");
+        //  const users = await userList(zkjubaer);
+        //   console.log(users);
+        if (!isSubscribed) {
+          isSubscribed = true;
+          await subscribeToRealTimeLogs(zkjubaer);
+        }
+
+        // Wait for a specific duration (adjust as needed)
+        await delay(5000);
+      } catch (operationError) {
+        console.error("Error during operations:", operationError);
+      } finally {
+        await disconnect(zkjubaer);
+      }
+    // }
+  } catch (initializationError) {
+    console.error("Error during initialization:", initializationError);
+  }
+};
+
+process.on("SIGINT", () => {
+  console.log("Script terminated by user.");
+  process.exit();
+});
+
+runMachine();

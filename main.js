@@ -1,9 +1,9 @@
 const ZKJUBAER = require("zk-jubaer");
 const axios = require('axios');
 
-const ip = "";
+const ip = "192.168.1.250";
 const port = 4370;
-const timeout = 520000;
+const timeout = 5200;
 const inport = 1000;
 
 // REST API Parameters
